@@ -1,0 +1,16 @@
+[submodule "examples/nucleo-f429zi/Lib/Stm32Common"]
+	path = examples/nucleo-f429zi/Lib/Stm32Common
+	url = https://github.com/libsmart/Stm32Common.git
+	branch = 0.1.x
+[submodule "examples/nucleo-f429zi/Lib/Stm32ItmLogger"]
+	path = examples/nucleo-f429zi/Lib/Stm32ItmLogger
+	url = https://github.com/libsmart/Stm32ItmLogger.git
+	branch = 1.0.x
+[submodule "examples/nucleo-f429zi/Lib/Stm32ThreadX"]
+	path = examples/nucleo-f429zi/Lib/Stm32ThreadX
+	url = https://github.com/libsmart/Stm32ThreadX.git
+	branch = 0.1.x
+[submodule "examples/nucleo-f429zi/Lib/Stm32NetX"]
+	path = examples/nucleo-f429zi/Lib/Stm32NetX
+	url = https://github.com/libsmart/Stm32NetX.git
+	branch = 0.1.x
