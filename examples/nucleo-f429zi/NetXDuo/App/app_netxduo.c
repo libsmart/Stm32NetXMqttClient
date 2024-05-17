@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include <main.h>
 #include "Stm32NetXCPPWrapper.hpp"
+#include "Stm32NetXMqttClientCPPWrapper.hpp"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -67,8 +68,12 @@ UINT MX_NetXDuo_Init(VOID *memory_ptr)
 
   /* USER CODE BEGIN MX_NetXDuo_Init */
 
-  // Jump to our C++ NetX thread setup function
+  // Jump to the C++ NetX thread setup function
   ret = Stm32NetX_setup(byte_pool);
+  assert_param(ret == TX_SUCCESS);
+
+  // Jump to the C++ NetXMqttClient thread setup function
+  ret = Stm32NetXMqttClient_setup(byte_pool);
   assert_param(ret == TX_SUCCESS);
 
   /* USER CODE END MX_NetXDuo_Init */
