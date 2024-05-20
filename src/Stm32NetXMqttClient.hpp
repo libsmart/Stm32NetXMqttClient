@@ -17,7 +17,7 @@
 
 namespace Stm32NetXMqttClient {
     class MqttClient;
-    extern MqttClient mqttClient;
+    inline MqttClient *mqttClient = {};
 
     class MqttClient : public Stm32ItmLogger::Loggable, public Stm32ThreadX::Thread, public NXD_MQTT_CLIENT {
     public:
@@ -28,7 +28,8 @@ namespace Stm32NetXMqttClient {
             : Loggable(logger),
               Thread(Stm32ThreadX::BOUNCE(MqttClient, mqttThread), reinterpret_cast<ULONG>(this), priority(),
                      "Stm32NetXMqttClient::MqttClient"),
-              NXD_MQTT_CLIENT(), NX(nx) { ; }
+              NXD_MQTT_CLIENT(), NX(nx) {
+        }
 
         [[noreturn]] void mqttThread();
 
@@ -45,13 +46,17 @@ namespace Stm32NetXMqttClient {
             Stm32ItmLogger::logger.setSeverity(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
                     ->println("Stm32NetXMqttClient::MqttClient::setup()");
 
-            mqttClient.createNetworkThread();
+            // mqttClient.createNetworkThread();
+
+
+            mqttClient = new MqttClient(Stm32NetX::NX, &Stm32ItmLogger::logger);
+            mqttClient->createNetworkThread();
 
             return TX_SUCCESS;
         }
     };
 
-    inline MqttClient mqttClient(Stm32NetX::NX, &Stm32ItmLogger::logger);
+    // inline MqttClient mqttClient(Stm32NetX::NX, &Stm32ItmLogger::logger);
 }
 
 #endif //LIBSMART_STM32NETXMQTTCLIENT_STM32NETXMQTTCLIENT_HPP
