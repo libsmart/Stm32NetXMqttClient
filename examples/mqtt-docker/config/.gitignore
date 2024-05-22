@@ -1,0 +1,6 @@
+/*.crt
+/*.csr
+/*.key
+/dhparam.pem
+/*.srl
+/password_file.txt
