@@ -14,9 +14,25 @@
 #include "Stm32ItmLogger.hpp"
 #include "Stm32NetX.hpp"
 #include "WaitOption.hpp"
+#ifdef NX_SECURE_ENABLE
+#include "nx_secure_tls.h"
+#include "../../../../mqtt-docker/ca_crt.h"
+#endif
+
+#define CRYPTO_METADATA_CLIENT_SIZE 11600
+#define TLS_PACKET_BUFFER_SIZE      4000
+
+/* TLS buffers and certificate containers. */
+extern const NX_SECURE_TLS_CRYPTO nx_crypto_tls_ciphers;
 
 
 namespace Stm32NetXMqttClient {
+    /* calculated with nx_secure_tls_metadata_size_calculate */
+    static CHAR crypto_metadata_client[CRYPTO_METADATA_CLIENT_SIZE] __attribute__((section(".ccmram")));
+    /* Define the TLS packet reassembly buffer. */
+    static UCHAR tls_packet_buffer[TLS_PACKET_BUFFER_SIZE] __attribute__((section(".ccmram")));
+
+
     template<class T, class Method, Method m, class... Params>
     static auto bounce(NXD_MQTT_CLIENT *mqtt_client_ptr, Params... params) ->
         decltype(((*reinterpret_cast<T *>(mqtt_client_ptr->nxd_mqtt_thread.tx_thread_entry_parameter)).*m)(params...)) {
@@ -33,6 +49,7 @@ namespace Stm32NetXMqttClient {
             NONE = 0,
             IS_CREATED = 1 << 0,
             IS_CONNECTED = 1 << 1,
+            IS_READY_FOR_CONNECT = 1 << 2,
             THE_END = 1 << 31
         };
 
@@ -49,12 +66,14 @@ namespace Stm32NetXMqttClient {
               Nameable("clientid"),
               Thread(Stm32ThreadX::BOUNCE(MqttClient, mqttThread), reinterpret_cast<ULONG>(this), priority(),
                      "Stm32NetXMqttClient::MqttClient::mqttThread()"), NXD_MQTT_CLIENT(), NX(nx) {
-            flags.create();
         }
 
         [[noreturn]] void mqttThread();
 
         const char *getClientId();
+
+
+        bool isReadyForConnect() { return flags.isSet(IS_READY_FOR_CONNECT); }
 
         /**
          * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_create
@@ -66,25 +85,13 @@ namespace Stm32NetXMqttClient {
          * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_connect
          */
         UINT connect(NXD_ADDRESS *server_ip, UINT server_port, UINT keepalive, UINT clean_session,
-                     Stm32ThreadX::WaitOption waitOption) {
-            log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
-                    ->printf("Stm32NetXMqttClient::MqttClient[%s]::connect()\r\n", getClientId());
+                     Stm32ThreadX::WaitOption waitOption);
 
-            const auto ret = nxd_mqtt_client_connect(this,
-                                                     server_ip,
-                                                     server_port,
-                                                     keepalive,
-                                                     clean_session,
-                                                     waitOption());
-            if (ret != NXD_MQTT_SUCCESS) {
-                log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
-                        ->printf("MQTT client '%s' connect failed. nxd_mqtt_client_connect() = 0x%02x\r\n",
-                                 getClientId(), ret);
-                return ret;
-            }
-            flags.set(IS_CONNECTED);
-            return ret;
-        }
+        /**
+         * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_secure_connect
+         */
+        UINT secureConnect(NXD_ADDRESS *server_ip, UINT server_port, UINT keepalive, UINT clean_session,
+                           Stm32ThreadX::WaitOption waitOption);
 
         /**
          * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_disconnect
@@ -126,10 +133,90 @@ namespace Stm32NetXMqttClient {
             log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
                     ->printf("Stm32NetXMqttClient::MqttClient[%s]::disconnectCallback()\r\n", getClientId());
             // Stm32ItmLogger::logger.setSeverity(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
-                    // ->println("Stm32NetXMqttClient::MqttClient::disconnectCallback()");
+            // ->println("Stm32NetXMqttClient::MqttClient::disconnectCallback()");
             // Stm32ItmLogger::logger.printf("disconnectNotify this=0x%08x\r\n", this);
             flags.clear(IS_CONNECTED);
         }
+
+#ifdef NX_SECURE_ENABLE
+        UINT tlsSetupCallback(
+            NX_SECURE_TLS_SESSION *TLS_session_ptr,
+            NX_SECURE_X509_CERT *certificate_ptr,
+            NX_SECURE_X509_CERT *trusted_certificate_ptr) {
+
+            const auto logger = &Stm32ItmLogger::logger;
+            logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
+                    ->printf("Stm32NetXMqttClient::MqttClient[%s]::tlsSetupCallback()\r\n", getClientId());
+
+            UINT ret = NX_SUCCESS;
+
+            // Initialize TLS module
+            nx_secure_tls_initialize();
+
+
+            // Create a TLS session
+            ret = nx_secure_tls_session_create(TLS_session_ptr, &nx_crypto_tls_ciphers,
+                                               crypto_metadata_client, sizeof(crypto_metadata_client));
+            if (ret != NX_SUCCESS) {
+                logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                        ->printf("TLS session create failed. nx_secure_tls_session_create() = 0x%02x\r\n",
+                                 ret);
+                return ret;
+            }
+
+
+            // Need to allocate space for the certificate coming in from the broker
+            memset((certificate_ptr), 0, sizeof(NX_SECURE_X509_CERT));
+
+
+            // Allocate space for packet reassembly
+            ret = nx_secure_tls_session_packet_buffer_set(TLS_session_ptr, tls_packet_buffer,
+                                                          sizeof(tls_packet_buffer));
+            if (ret != NX_SUCCESS) {
+                logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                        ->printf("TLS session packet buffet set failed. nx_secure_tls_session_packet_buffer_set() = 0x%02x\r\n",
+                                 ret);
+                return ret;
+            }
+
+
+            // allocate space for the certificate coming in from the remote host
+            ret = nx_secure_tls_remote_certificate_allocate(TLS_session_ptr, certificate_ptr,
+                                                            tls_packet_buffer, sizeof(tls_packet_buffer));
+            if (ret != NX_SUCCESS) {
+                logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                        ->printf("TLS remote certificate allocations failed. nx_secure_tls_remote_certificate_allocate() = 0x%02x\r\n",
+                                 ret);
+                return ret;
+            }
+
+
+            // initialize Certificate to verify incoming server certificates
+            // https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-secure-tls/chapter4.md#nx_secure_x509_certificate_initialize
+            ret = nx_secure_x509_certificate_initialize(trusted_certificate_ptr, (UCHAR*)rootca_certs,
+                                                        ROOTCA_CERTS_LEN, NX_NULL, 0, NULL, 0,
+                                                        NX_SECURE_X509_KEY_TYPE_NONE);
+            if (ret != NX_SUCCESS) {
+                logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                        ->printf("X509 certificate initialization failed. nx_secure_x509_certificate_initialize() = 0x%02x\r\n",
+                                 ret);
+                return ret;
+            }
+
+
+            // Add a CA Certificate to our trusted store
+            ret = nx_secure_tls_trusted_certificate_add(TLS_session_ptr, trusted_certificate_ptr);
+            if (ret != NX_SUCCESS) {
+                logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                        ->printf("TLS trusted certificate add failed. nx_secure_tls_trusted_certificate_add() = 0x%02x\r\n",
+                                 ret);
+                return ret;
+            }
+
+
+            return ret;
+        }
+#endif
 
     protected:
         void createNetworkThread();
@@ -144,17 +231,12 @@ namespace Stm32NetXMqttClient {
             Stm32ItmLogger::logger.setSeverity(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
                     ->println("Stm32NetXMqttClient::MqttClient::setup()");
 
-            // mqttClient.createNetworkThread();
-
-
             mqttClient = new MqttClient(Stm32NetX::NX, &Stm32ItmLogger::logger);
             mqttClient->createNetworkThread();
 
             return TX_SUCCESS;
         }
     };
-
-    // inline MqttClient mqttClient(Stm32NetX::NX, &Stm32ItmLogger::logger);
 }
 
 #endif //LIBSMART_STM32NETXMQTTCLIENT_STM32NETXMQTTCLIENT_HPP

@@ -5,6 +5,7 @@
 
 #include "setupMainThread.hpp"
 #include "defines.h"
+#include "EventFlags.hpp"
 #include "Helper.hpp"
 #include "main.hpp"
 #include "Stm32ItmLoggerCPPWrapper.hpp"
@@ -12,6 +13,15 @@
 
 CHAR threadName_mainLoopThread[] = "loop()";
 CCMRAM TX_THREAD threadStruct_mainLoopThread;
+
+enum class mainThreadFlagsEnum : ULONG {
+    NONE = (ULONG)0,
+    IS_SYSTEM_INITIALIZED = (ULONG)1 << 0,
+    IS_RUNNING = (ULONG)1 << 1,
+    THE_END = (ULONG)1 << 31
+};
+
+CCMRAM Stm32ThreadX::EventFlags mainThreadFlags;
 _Noreturn static VOID mainLoopThread(ULONG initial_input);
 
 
@@ -35,8 +45,17 @@ UINT setupMainThread(TX_BYTE_POOL *byte_pool) {
 
 
 _Noreturn static VOID mainLoopThread(ULONG initial_input) {
+    // mainThreadFlags.await(static_cast<ULONG>(mainThreadFlagsEnum::IS_SYSTEM_INITIALIZED));
+    tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND);
+    mainThreadFlags.set(static_cast<ULONG>(mainThreadFlagsEnum::IS_SYSTEM_INITIALIZED));
+    mainThreadFlags.set(static_cast<ULONG>(mainThreadFlagsEnum::IS_RUNNING));
+
+    // setup2();
+
     while (true) {
-        loop();
+        if (mainThreadFlags.isSet(static_cast<ULONG>(mainThreadFlagsEnum::IS_RUNNING))) {
+            loop();
+        }
         // Sleep for 1 tick
         tx_thread_sleep(1);
     }

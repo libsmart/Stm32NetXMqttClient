@@ -49,7 +49,7 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
-include_directories(Core/Inc AZURE_RTOS/App NetXDuo/App NetXDuo/Target Drivers/STM32F4xx_HAL_Driver/Inc Drivers/STM32F4xx_HAL_Driver/Inc/Legacy Drivers/CMSIS/Device/ST/STM32F4xx/Include Drivers/CMSIS/Include Drivers/BSP/Components/lan8742/ Middlewares/ST/netxduo/addons/dhcp/ Middlewares/ST/netxduo/common/inc/ Middlewares/ST/netxduo/ports/cortex_m4/gnu/inc/ Middlewares/ST/netxduo/common/drivers/ethernet/ Middlewares/ST/threadx/common/inc/ Middlewares/ST/threadx/ports/cortex_m4/gnu/inc/ Middlewares/ST/netxduo/addons/mqtt/ Application ../../src Lib/Stm32Common/src Lib/Stm32ItmLogger/src Lib/Stm32ThreadX/src Lib/Stm32NetX/src)
+include_directories(Core/Inc AZURE_RTOS/App NetXDuo/App NetXDuo/Target Drivers/STM32F4xx_HAL_Driver/Inc Drivers/STM32F4xx_HAL_Driver/Inc/Legacy Drivers/CMSIS/Device/ST/STM32F4xx/Include Drivers/CMSIS/Include Drivers/BSP/Components/lan8742/ Middlewares/ST/netxduo/addons/dhcp/ Middlewares/ST/netxduo/common/inc/ Middlewares/ST/netxduo/ports/cortex_m4/gnu/inc/ Middlewares/ST/netxduo/common/drivers/ethernet/ Middlewares/ST/threadx/common/inc/ Middlewares/ST/threadx/ports/cortex_m4/gnu/inc/ Middlewares/ST/netxduo/addons/mqtt/ Middlewares/ST/netxduo/nx_secure/inc/ Middlewares/ST/netxduo/nx_secure/ports/ Middlewares/ST/netxduo/crypto_libraries/inc/ Middlewares/ST/netxduo/crypto_libraries/ports/cortex_m4/gnu/inc/ Middlewares/ST/netxduo/crypto_libraries/ports/cortex_m4/ac6/inc/ Application ../../src Lib/Stm32Common/src Lib/Stm32ItmLogger/src Lib/Stm32ThreadX/src Lib/Stm32NetX/src)
 
 add_definitions(-DDEBUG -DTX_INCLUDE_USER_DEFINE_FILE -DNX_INCLUDE_USER_DEFINE_FILE -DUSE_HAL_DRIVER -DSTM32F429xx)
 

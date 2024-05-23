@@ -2,6 +2,10 @@
 
 
 
+This commands were tested on Windows with Docker Desktop installed. Execute in PowerShell from directory `Stm32NetXMqttClient\examples\mqtt-docker\`
+
+
+
 ## Create dh parameters
 
 ```

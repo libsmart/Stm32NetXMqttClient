@@ -6,6 +6,10 @@
 #include "Stm32NetXMqttClient.hpp"
 
 #include "Address.hpp"
+#ifdef NX_SECURE_ENABLE
+#include "nx_secure_tls.h"
+#include "nx_secure_x509.h"
+#endif
 
 using namespace Stm32NetXMqttClient;
 
@@ -26,9 +30,11 @@ void MqttClient::mqttThread() {
     log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
             ->println("Stm32NetXMqttClient::MqttClient::mqttThread()");
 
+    /*
     Stm32NetX::Address address;
     address.nxd_ip_version = 4;
     address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 2, 198);;
+    */
 
     UINT ret = 1;
 
@@ -46,19 +52,24 @@ void MqttClient::mqttThread() {
             }
 
             // disconnectNotifySet(
-                // bounce<MqttClient, decltype(&MqttClient::disconnectCallback), &MqttClient::disconnectCallback>);
+            // bounce<MqttClient, decltype(&MqttClient::disconnectCallback), &MqttClient::disconnectCallback>);
 
+            /*
             ret = loginSet("testuser", "eZ.1234");
             if (ret != NXD_MQTT_SUCCESS) {
                 break;
             }
+            */
 
+            /*
             ret = connect(&address, NXD_MQTT_PORT, 30, NX_TRUE,
                           Stm32ThreadX::WaitOption{TX_TIMER_TICKS_PER_SECOND * 10});
             if (ret != NXD_MQTT_SUCCESS) {
                 break;
             }
+            */
 
+            flags.await(IS_CONNECTED);
 
             // Run as long as ip address is valid
             while (NX->isIpSet() && flags.isSet(IS_CONNECTED)) {
@@ -69,7 +80,6 @@ void MqttClient::mqttThread() {
 
         // Disconnect from the broker.
         disconnect();
-
 
         // Delete the client instance, release all the resources.
         deleteClient();
@@ -109,8 +119,68 @@ UINT MqttClient::create() {
         return ret;
     }
     flags.set(IS_CREATED);
+    flags.set(IS_READY_FOR_CONNECT);
 
     return ret;
+}
+
+UINT MqttClient::connect(NXD_ADDRESS *server_ip, UINT server_port, UINT keepalive, UINT clean_session,
+                         Stm32ThreadX::WaitOption waitOption) {
+    log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
+            ->printf("Stm32NetXMqttClient::MqttClient[%s]::connect()\r\n", getClientId());
+
+    flags.clear(IS_READY_FOR_CONNECT);
+
+    const auto ret = nxd_mqtt_client_connect(this,
+                                             server_ip,
+                                             server_port,
+                                             keepalive,
+                                             clean_session,
+                                             waitOption());
+    if (ret != NXD_MQTT_SUCCESS) {
+        log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                ->printf("MQTT client '%s' connect failed. nxd_mqtt_client_connect() = 0x%02x\r\n",
+                         getClientId(), ret);
+        return ret;
+    }
+    flags.set(IS_CONNECTED);
+    return ret;
+}
+
+UINT MqttClient::secureConnect(NXD_ADDRESS *server_ip, UINT server_port, UINT keepalive, UINT clean_session,
+                               Stm32ThreadX::WaitOption waitOption) {
+    log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
+            ->printf("Stm32NetXMqttClient::MqttClient[%s]::secureConnect()\r\n", getClientId());
+
+#ifdef NX_SECURE_ENABLE
+    flags.clear(IS_READY_FOR_CONNECT);
+
+    const auto ret = nxd_mqtt_client_secure_connect(this,
+                                                    server_ip,
+                                                    server_port,
+                                                    bounce<
+                                                        MqttClient,
+                                                        decltype(&MqttClient::tlsSetupCallback),
+                                                        &MqttClient::tlsSetupCallback,
+                                                        NX_SECURE_TLS_SESSION *,
+                                                        NX_SECURE_X509_CERT *,
+                                                        NX_SECURE_X509_CERT *>,
+                                                    keepalive,
+                                                    clean_session,
+                                                    waitOption());
+    if (ret != NXD_MQTT_SUCCESS) {
+        log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                ->printf("MQTT client '%s' connect failed. nxd_mqtt_client_connect() = 0x%02x\r\n",
+                         getClientId(), ret);
+        return ret;
+    }
+    flags.set(IS_CONNECTED);
+    return ret;
+#else
+    log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+            ->println("NOT ENABLED");
+    return NX_NOT_ENABLED;
+#endif
 }
 
 UINT MqttClient::disconnect() {
@@ -125,12 +195,15 @@ UINT MqttClient::disconnect() {
         return ret;
     }
     flags.clear(IS_CONNECTED);
+    flags.set(IS_READY_FOR_CONNECT);
     return ret;
 }
 
 UINT MqttClient::deleteClient() {
     log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
             ->printf("Stm32NetXMqttClient::MqttClient[%s]::deleteClient()\r\n", getClientId());
+
+    flags.clear(IS_READY_FOR_CONNECT);
 
     const auto ret = nxd_mqtt_client_delete(this);
     if (ret != NXD_MQTT_SUCCESS) {

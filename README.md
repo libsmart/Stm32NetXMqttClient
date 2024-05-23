@@ -8,6 +8,7 @@ A MQTT client for Stm32NetX
 
 * ThreadX (Core) (Memory pool size: 5*1024)
 * NetX (NX Core, Ethernet Interface, Ethernet Phy Interface) (Memory pool size: 35*1024)
+* TLS, Crypto (NX_SECURE_ENABLE)
 * HAL ethernet configuration (MAC address?)
 * Stm32ItmLogger
 * Stm32Common

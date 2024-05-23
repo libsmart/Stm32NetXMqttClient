@@ -10,6 +10,10 @@
  */
 
 #include "main.hpp"
+
+#include <Stm32NetXMqttClient.hpp>
+
+#include "Address.hpp"
 #include "globals.hpp"
 #include "Helper.hpp"
 
@@ -20,6 +24,9 @@
  * @see main() in Core/Src/main.c
  */
 void setup() {
+    Stm32ItmLogger::logger.setSeverity(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
+        ->println("::setup()");
+
     dummyCpp = 0;
     dummyCandCpp = 0;
 
@@ -37,6 +44,20 @@ void loop() {
     //        HAL_GPIO_WritePin(LED2_ORG_GPIO_Port, LED2_ORG_Pin, dummyCpp & 2 ? GPIO_PIN_RESET : GPIO_PIN_SET);
     //        HAL_GPIO_WritePin(LED3_RED_GPIO_Port, LED3_RED_Pin, dummyCpp & 4 ? GPIO_PIN_RESET : GPIO_PIN_SET);
     //        HAL_GPIO_WritePin(LED4_BLU_GPIO_Port, LED4_BLU_Pin, dummyCpp & 8 ? GPIO_PIN_RESET : GPIO_PIN_SET);
+
+    Stm32NetX::Address address;
+    address.nxd_ip_version = 4;
+    address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 2, 198);;
+
+    if(Stm32NetXMqttClient::mqttClient->isReadyForConnect()) {
+        Stm32NetXMqttClient::mqttClient->loginSet("testuser", "eZ.1234");
+        // Stm32NetXMqttClient::mqttClient->connect(&address, NXD_MQTT_PORT, 30, NX_TRUE,
+        //               Stm32ThreadX::WaitOption{TX_TIMER_TICKS_PER_SECOND * 10});
+
+        Stm32NetXMqttClient::mqttClient->secureConnect(&address, NXD_MQTT_TLS_PORT, 30, NX_TRUE,
+               Stm32ThreadX::WaitOption{TX_TIMER_TICKS_PER_SECOND * 10});
+
+    }
 
 
     dummyCpp++;
