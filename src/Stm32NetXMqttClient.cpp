@@ -36,6 +36,11 @@ void MqttClient::mqttThread() {
     address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 2, 198);;
     */
 
+    UCHAR topic_buffer[128];
+    UINT actual_topic_length;
+    UCHAR message_buffer[32];
+    UINT actual_message_length;
+
     UINT ret = 1;
 
     NX->waitForIpInstance();
@@ -73,6 +78,22 @@ void MqttClient::mqttThread() {
 
             // Run as long as ip address is valid
             while (NX->isIpSet() && flags.isSet(IS_CONNECTED)) {
+                if (hasMessage()) {
+                    memset(topic_buffer, 0, sizeof(topic_buffer));
+                    memset(message_buffer, 0, sizeof(message_buffer));
+
+                    ret = messageGet(
+                        topic_buffer, sizeof(topic_buffer), &actual_topic_length,
+                        message_buffer, sizeof(message_buffer), &actual_message_length
+                    );
+                    if (ret == NXD_MQTT_SUCCESS) {
+                        log(Stm32ItmLogger::LoggerInterface::Severity::NOTICE)
+                                ->printf("MQTT '%s' = '%s'\r\n",
+                                         topic_buffer,
+                                         message_buffer
+                                );
+                    }
+                }
                 tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND);
             }
             break;
@@ -112,9 +133,81 @@ UINT MqttClient::publish(const CHAR *topic_name, const CHAR *message, UINT retai
         log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
                 ->printf("MQTT client '%s' publish failed. nxd_mqtt_client_publish() = 0x%02x\r\n",
                          getClientId(), ret);
-        return ret;
     }
     return ret;
+}
+
+UINT MqttClient::subscribe(const CHAR *topic_name, UINT QoS) {
+    log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
+            ->printf("Stm32NetXMqttClient::MqttClient[%s]::subscribe('%s')\r\n", getClientId(), topic_name);
+
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_subscribe
+    const auto ret = nxd_mqtt_client_subscribe(this,
+                                               const_cast<CHAR *>(topic_name),
+                                               strlen(topic_name),
+                                               QoS
+    );
+    if (ret != NXD_MQTT_SUCCESS) {
+        log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                ->printf("MQTT client '%s' subscribe failed. nxd_mqtt_client_subscribe() = 0x%02x\r\n",
+                         getClientId(), ret);
+    }
+    return ret;
+}
+
+UINT MqttClient::unsubscribe(const CHAR *topic_name) {
+    log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
+            ->printf("Stm32NetXMqttClient::MqttClient[%s]::unsubscribe('%s')\r\n", getClientId(), topic_name);
+
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_unsubscribe
+    const auto ret = nxd_mqtt_client_unsubscribe(this,
+                                                 const_cast<CHAR *>(topic_name),
+                                                 strlen(topic_name)
+    );
+    if (ret != NXD_MQTT_SUCCESS) {
+        log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                ->printf("MQTT client '%s' unsubscribe failed. nxd_mqtt_client_unsubscribe() = 0x%02x\r\n",
+                         getClientId(), ret);
+    }
+    return ret;
+}
+
+UINT MqttClient::messageGet(UCHAR *topic_buffer, UINT topic_buffer_size, UINT *actual_topic_length,
+                            UCHAR *message_buffer, UINT message_buffer_size, UINT *actual_message_length) {
+    log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
+            ->printf("Stm32NetXMqttClient::MqttClient[%s]::messageGet()\r\n", getClientId());
+
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_message_get
+    const auto ret = nxd_mqtt_client_message_get(this,
+                                                 topic_buffer,
+                                                 topic_buffer_size,
+                                                 actual_topic_length,
+                                                 message_buffer,
+                                                 message_buffer_size,
+                                                 actual_message_length
+    );
+    if (ret != NXD_MQTT_SUCCESS && ret != NXD_MQTT_NO_MESSAGE) {
+        log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                ->printf("MQTT client '%s' message get failed. nxd_mqtt_client_message_get() = 0x%02x\r\n",
+                         getClientId(), ret);
+    }
+    return ret;
+}
+
+bool MqttClient::hasMessage() {
+    UINT actual_topic_length, actual_message_length;
+    UCHAR topic_buffer, message_buffer;
+
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_message_get
+    const auto ret = nxd_mqtt_client_message_get(this,
+                                                 &topic_buffer,
+                                                 0,
+                                                 &actual_topic_length,
+                                                 &message_buffer,
+                                                 0,
+                                                 &actual_message_length
+    );
+    return ret == NXD_MQTT_INSUFFICIENT_BUFFER_SPACE;
 }
 
 UINT MqttClient::create() {

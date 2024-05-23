@@ -80,6 +80,7 @@ namespace Stm32NetXMqttClient {
 
 
         bool isReadyForConnect() { return flags.isSet(IS_READY_FOR_CONNECT); }
+        bool isConnected() { return flags.isSet(IS_CONNECTED); }
 
         /**
          * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_publish
@@ -89,6 +90,41 @@ namespace Stm32NetXMqttClient {
                      UINT retain,
                      UINT QoS,
                      Stm32ThreadX::WaitOption waitOption);
+
+        /**
+         * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_subscribe
+         */
+        UINT subscribe(const CHAR *topic_name, UINT QoS);
+
+        /**
+         * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_unsubscribe
+         */
+        UINT unsubscribe(const CHAR *topic_name);
+
+        /**
+         * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_message_get
+         */
+        UINT messageGet(UCHAR *topic_buffer,
+                        UINT topic_buffer_size,
+                        UINT *actual_topic_length,
+                        UCHAR *message_buffer,
+                        UINT message_buffer_size,
+                        UINT *actual_message_length);
+
+
+        /**
+         * @brief Checks if there is a pending MQTT message.
+         *
+         * This method checks if there is a pending MQTT message available. It calls the `nxd_mqtt_client_message_get`
+         * function to check the presence of a message.
+         *
+         * @return `true` if there is a pending MQTT message, `false` otherwise.
+         *
+         * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_message_get
+         * @note This method assumes that the MQTT client instance has been created and is connected to the broker.
+         */
+        bool hasMessage();
+
 
         /**
          * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_create

@@ -48,7 +48,8 @@ void loop() {
 
     Stm32NetX::Address address;
     address.nxd_ip_version = 4;
-    address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 2, 198);;
+    // address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 2, 198);
+    address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 3, 130);
 
     if (Stm32NetXMqttClient::mqttClient->isReadyForConnect()) {
         Stm32NetXMqttClient::mqttClient->loginSet("testuser", "eZ.1234");
@@ -64,6 +65,10 @@ void loop() {
 
         Stm32NetXMqttClient::mqttClient->secureConnect(&address, NXD_MQTT_TLS_PORT, 30, NX_TRUE,
                                                        Stm32ThreadX::WaitOption{TX_TIMER_TICKS_PER_SECOND * 10});
+
+        if (Stm32NetXMqttClient::mqttClient->isConnected()) {
+            Stm32NetXMqttClient::mqttClient->subscribe("world", 0);
+        }
     }
 
 
