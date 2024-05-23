@@ -93,6 +93,30 @@ const char *MqttClient::getClientId() {
     return Nameable::getName();
 }
 
+UINT MqttClient::publish(const CHAR *topic_name, const CHAR *message, UINT retain, UINT QoS,
+                         Stm32ThreadX::WaitOption waitOption) {
+    log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
+            ->printf("Stm32NetXMqttClient::MqttClient[%s]::publish('%s', '%s')\r\n", getClientId(), topic_name,
+                     message);
+
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_publish
+    const auto ret = nxd_mqtt_client_publish(this,
+                                             const_cast<CHAR *>(topic_name),
+                                             strlen(topic_name),
+                                             const_cast<CHAR *>(message),
+                                             strlen(message),
+                                             retain,
+                                             QoS,
+                                             waitOption());
+    if (ret != NXD_MQTT_SUCCESS) {
+        log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                ->printf("MQTT client '%s' publish failed. nxd_mqtt_client_publish() = 0x%02x\r\n",
+                         getClientId(), ret);
+        return ret;
+    }
+    return ret;
+}
+
 UINT MqttClient::create() {
     log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
             ->printf("Stm32NetXMqttClient::MqttClient[%s]::create()\r\n", getClientId());

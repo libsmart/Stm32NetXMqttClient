@@ -16,6 +16,7 @@
 #include "Address.hpp"
 #include "globals.hpp"
 #include "Helper.hpp"
+#include "RunEvery.hpp"
 #include "../../../../mqtt-docker/ca_crt.h"
 
 /**
@@ -68,6 +69,15 @@ void loop() {
 
     dummyCpp++;
     dummyCandCpp++;
+
+    static Stm32Common::RunEvery re1(2000);
+    re1.loop([]() {
+        char str[10];
+        snprintf(str, sizeof(str), "%d", dummyCpp);
+        Stm32NetXMqttClient::mqttClient->publish("hello", str, NX_TRUE, 0,
+                                                 Stm32ThreadX::WaitOption{Stm32ThreadX::WaitOption::NO_WAIT});
+    });
+
     HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
     delay(300);
 }

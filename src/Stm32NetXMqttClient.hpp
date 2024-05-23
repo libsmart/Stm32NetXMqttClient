@@ -82,6 +82,15 @@ namespace Stm32NetXMqttClient {
         bool isReadyForConnect() { return flags.isSet(IS_READY_FOR_CONNECT); }
 
         /**
+         * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_publish
+         */
+        UINT publish(const CHAR *topic_name,
+                     const CHAR *message,
+                     UINT retain,
+                     UINT QoS,
+                     Stm32ThreadX::WaitOption waitOption);
+
+        /**
          * @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_create
          */
         UINT create();
@@ -237,6 +246,7 @@ namespace Stm32NetXMqttClient {
                                        NX_SECURE_TLS_SESSION *,
                                        NX_SECURE_X509_CERT *,
                                        NX_SECURE_X509_CERT *) {
+            return NX_NOT_ENABLED;
         }
 
 
