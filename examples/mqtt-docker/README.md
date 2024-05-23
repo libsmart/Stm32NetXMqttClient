@@ -31,7 +31,7 @@ docker run --rm -it -v .:/local alpine/openssl:latest x509 -req -in /local/confi
 ### Create a header file for the CA
 
 ```powershell
-docker run --rm -it -v .:/local -w /local python:latest /bin/sh -c "pip3 install pyopenssl click && python3 pycert.py convert -o ca.crt.h config/ca.crt"
+docker run --rm -it -v .:/local -w /local python:latest /bin/sh -c "pip3 install pyopenssl click && python3 pycert.py convert -o ca_crt.h config/ca.crt"
 ```
 
 

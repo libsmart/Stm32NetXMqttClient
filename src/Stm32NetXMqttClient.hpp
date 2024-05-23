@@ -14,9 +14,15 @@
 #include "Stm32ItmLogger.hpp"
 #include "Stm32NetX.hpp"
 #include "WaitOption.hpp"
+#ifdef LIBSMART_ENABLE_STD_FUNCTION
+#include <cstdint>
+#include <functional>
+#include <iomanip>
+#include <utility>
+#endif
 #ifdef NX_SECURE_ENABLE
+#include "Secure/X509.hpp"
 #include "nx_secure_tls.h"
-#include "../../../../mqtt-docker/ca_crt.h"
 #endif
 
 #define CRYPTO_METADATA_CLIENT_SIZE 11600
@@ -143,7 +149,6 @@ namespace Stm32NetXMqttClient {
             NX_SECURE_TLS_SESSION *TLS_session_ptr,
             NX_SECURE_X509_CERT *certificate_ptr,
             NX_SECURE_X509_CERT *trusted_certificate_ptr) {
-
             const auto logger = &Stm32ItmLogger::logger;
             logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
                     ->printf("Stm32NetXMqttClient::MqttClient[%s]::tlsSetupCallback()\r\n", getClientId());
@@ -174,8 +179,9 @@ namespace Stm32NetXMqttClient {
                                                           sizeof(tls_packet_buffer));
             if (ret != NX_SUCCESS) {
                 logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
-                        ->printf("TLS session packet buffet set failed. nx_secure_tls_session_packet_buffer_set() = 0x%02x\r\n",
-                                 ret);
+                        ->printf(
+                            "TLS session packet buffet set failed. nx_secure_tls_session_packet_buffer_set() = 0x%02x\r\n",
+                            ret);
                 return ret;
             }
 
@@ -185,37 +191,71 @@ namespace Stm32NetXMqttClient {
                                                             tls_packet_buffer, sizeof(tls_packet_buffer));
             if (ret != NX_SUCCESS) {
                 logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
-                        ->printf("TLS remote certificate allocations failed. nx_secure_tls_remote_certificate_allocate() = 0x%02x\r\n",
-                                 ret);
+                        ->printf(
+                            "TLS remote certificate allocations failed. nx_secure_tls_remote_certificate_allocate() = 0x%02x\r\n",
+                            ret);
                 return ret;
             }
 
 
             // initialize Certificate to verify incoming server certificates
-            // https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-secure-tls/chapter4.md#nx_secure_x509_certificate_initialize
-            ret = nx_secure_x509_certificate_initialize(trusted_certificate_ptr, (UCHAR*)rootca_certs,
-                                                        ROOTCA_CERTS_LEN, NX_NULL, 0, NULL, 0,
-                                                        NX_SECURE_X509_KEY_TYPE_NONE);
+            Stm32NetX::Secure::X509 x509TrustedCert(trusted_certificate_ptr, logger);
+            // ret = fnGetTrustedCertificate(x509TrustedCert);
+            ret = x509TrustedCert.certificateInitialize(rootca, rootca_length);
             if (ret != NX_SUCCESS) {
                 logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
-                        ->printf("X509 certificate initialization failed. nx_secure_x509_certificate_initialize() = 0x%02x\r\n",
-                                 ret);
+                        ->printf(
+                            "TLS trusted certificate get failed. fnGetTrustedCertificate() = 0x%02x\r\n",
+                            ret);
                 return ret;
             }
 
 
             // Add a CA Certificate to our trusted store
-            ret = nx_secure_tls_trusted_certificate_add(TLS_session_ptr, trusted_certificate_ptr);
+            // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-secure-tls/chapter4.md#nx_secure_tls_trusted_certificate_add
+            ret = nx_secure_tls_trusted_certificate_add(TLS_session_ptr, x509TrustedCert.getCert());
             if (ret != NX_SUCCESS) {
                 logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
-                        ->printf("TLS trusted certificate add failed. nx_secure_tls_trusted_certificate_add() = 0x%02x\r\n",
-                                 ret);
+                        ->printf(
+                            "TLS trusted certificate add failed. nx_secure_tls_trusted_certificate_add() = 0x%02x\r\n",
+                            ret);
                 return ret;
             }
 
 
             return ret;
         }
+
+
+        void setRootCa(const uint8_t *data, const USHORT data_length) {
+            rootca = const_cast<uint8_t *>(data);
+            rootca_length = data_length;
+        }
+
+
+        static UINT tls_setup_callback(NXD_MQTT_CLIENT *,
+                                       NX_SECURE_TLS_SESSION *,
+                                       NX_SECURE_X509_CERT *,
+                                       NX_SECURE_X509_CERT *) {
+        }
+
+
+#endif
+
+#ifdef LIBSMART_ENABLE_STD_FUNCTION
+
+    public:
+        using fnGetTrustedCertificate_t = std::function<UINT(Stm32NetX::Secure::X509 &x509TrustedCert)>;
+
+        void setGetTrustedCertificateFunction(const fnGetTrustedCertificate_t &fn) {
+            fnGetTrustedCertificate = fn;
+        }
+
+    private:
+        fnGetTrustedCertificate_t fnGetTrustedCertificate = [](Stm32NetX::Secure::X509 &x509TrustedCert) {
+            return static_cast<UINT>(NX_NOT_ENABLED);
+        };
+
 #endif
 
     protected:
@@ -225,6 +265,8 @@ namespace Stm32NetXMqttClient {
         Stm32NetX::NetX *NX;
         UCHAR *clientStackMemory = {};
         Stm32ThreadX::EventFlags flags{"Stm32NetXMqttClient::MqttClient::flags", getLogger()};
+        static uint8_t *rootca;
+        static USHORT rootca_length;
 
     public:
         static UINT setup(TX_BYTE_POOL *byte_pool) {
@@ -237,6 +279,9 @@ namespace Stm32NetXMqttClient {
             return TX_SUCCESS;
         }
     };
+
+    inline uint8_t *MqttClient::rootca = nullptr;
+    inline USHORT MqttClient::rootca_length = 0;
 }
 
 #endif //LIBSMART_STM32NETXMQTTCLIENT_STM32NETXMQTTCLIENT_HPP

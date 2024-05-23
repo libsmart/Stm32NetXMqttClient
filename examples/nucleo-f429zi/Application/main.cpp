@@ -16,7 +16,7 @@
 #include "Address.hpp"
 #include "globals.hpp"
 #include "Helper.hpp"
-
+#include "../../../../mqtt-docker/ca_crt.h"
 
 /**
  * @brief Setup function.
@@ -25,7 +25,7 @@
  */
 void setup() {
     Stm32ItmLogger::logger.setSeverity(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
-        ->println("::setup()");
+            ->println("::setup()");
 
     dummyCpp = 0;
     dummyCandCpp = 0;
@@ -49,14 +49,20 @@ void loop() {
     address.nxd_ip_version = 4;
     address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 2, 198);;
 
-    if(Stm32NetXMqttClient::mqttClient->isReadyForConnect()) {
+    if (Stm32NetXMqttClient::mqttClient->isReadyForConnect()) {
         Stm32NetXMqttClient::mqttClient->loginSet("testuser", "eZ.1234");
         // Stm32NetXMqttClient::mqttClient->connect(&address, NXD_MQTT_PORT, 30, NX_TRUE,
         //               Stm32ThreadX::WaitOption{TX_TIMER_TICKS_PER_SECOND * 10});
 
-        Stm32NetXMqttClient::mqttClient->secureConnect(&address, NXD_MQTT_TLS_PORT, 30, NX_TRUE,
-               Stm32ThreadX::WaitOption{TX_TIMER_TICKS_PER_SECOND * 10});
+        // Stm32NetXMqttClient::mqttClient->setGetTrustedCertificateFunction([](Stm32NetX::Secure::X509 &x509TrustedCert) {
+        // const auto ret = x509TrustedCert.certificateInitialize(rootca_certs, sizeof(rootca_certs));
+        // return ret;
+        // });
 
+        Stm32NetXMqttClient::mqttClient->setRootCa(rootca_certs, sizeof(rootca_certs));
+
+        Stm32NetXMqttClient::mqttClient->secureConnect(&address, NXD_MQTT_TLS_PORT, 30, NX_TRUE,
+                                                       Stm32ThreadX::WaitOption{TX_TIMER_TICKS_PER_SECOND * 10});
     }
 
 
@@ -77,12 +83,10 @@ void errorHandler() {
     }
 }
 
-void Stack_Error_Handler(TX_THREAD *thread_ptr)
-{
+void Stack_Error_Handler(TX_THREAD *thread_ptr) {
     Logger.print("==> Stack_Error_Handler() in ");
     Logger.println(thread_ptr->tx_thread_name);
     __disable_irq();
-    while (1)
-    {
+    while (1) {
     }
 }

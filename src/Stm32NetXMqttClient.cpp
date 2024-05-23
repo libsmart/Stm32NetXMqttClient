@@ -158,6 +158,8 @@ UINT MqttClient::secureConnect(NXD_ADDRESS *server_ip, UINT server_port, UINT ke
     const auto ret = nxd_mqtt_client_secure_connect(this,
                                                     server_ip,
                                                     server_port,
+                                                    // tls_setup_callback,
+
                                                     bounce<
                                                         MqttClient,
                                                         decltype(&MqttClient::tlsSetupCallback),
@@ -165,6 +167,7 @@ UINT MqttClient::secureConnect(NXD_ADDRESS *server_ip, UINT server_port, UINT ke
                                                         NX_SECURE_TLS_SESSION *,
                                                         NX_SECURE_X509_CERT *,
                                                         NX_SECURE_X509_CERT *>,
+
                                                     keepalive,
                                                     clean_session,
                                                     waitOption());
