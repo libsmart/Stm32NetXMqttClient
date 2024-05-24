@@ -114,8 +114,12 @@ const char *MqttClient::getClientId() {
     return Nameable::getName();
 }
 
-UINT MqttClient::publish(const CHAR *topic_name, const CHAR *message, UINT retain, UINT QoS,
-                         Stm32ThreadX::WaitOption waitOption) {
+void MqttClient::setClientId(const char *clientid) {
+    Nameable::setName(clientid);
+}
+
+UINT MqttClient::publish(const CHAR *topic_name, const CHAR *message, const UINT retain, const UINT QoS,
+                         const Stm32ThreadX::WaitOption waitOption) {
     log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
             ->printf("Stm32NetXMqttClient::MqttClient[%s]::publish('%s', '%s')\r\n", getClientId(), topic_name,
                      message);
@@ -220,6 +224,7 @@ UINT MqttClient::create() {
         clientStackMemory = NX->getBytePool()->allocate(LIBSMART_STM32NETX_MQTT_CLIENT_STACK_SIZE);
     }
 
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_create
     const auto ret = nxd_mqtt_client_create(this,
                                             const_cast<CHAR *>("mqtt_client"),
                                             const_cast<CHAR *>(getClientId()), strlen(getClientId()),
@@ -233,11 +238,12 @@ UINT MqttClient::create() {
         log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
                 ->printf("MQTT client '%s' create failed. nxd_mqtt_client_create() = 0x%02x\r\n",
                          getClientId(), ret);
+
+        flags.clear(IS_CREATED | IS_READY_FOR_CONNECT);
         return ret;
     }
-    flags.set(IS_CREATED);
-    flags.set(IS_READY_FOR_CONNECT);
 
+    flags.set(IS_CREATED | IS_READY_FOR_CONNECT);
     return ret;
 }
 
@@ -248,6 +254,7 @@ UINT MqttClient::connect(NXD_ADDRESS *server_ip, UINT server_port, UINT keepaliv
 
     flags.clear(IS_READY_FOR_CONNECT);
 
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_connect
     const auto ret = nxd_mqtt_client_connect(this,
                                              server_ip,
                                              server_port,
@@ -272,6 +279,7 @@ UINT MqttClient::secureConnect(NXD_ADDRESS *server_ip, UINT server_port, UINT ke
 #ifdef NX_SECURE_ENABLE
     flags.clear(IS_READY_FOR_CONNECT);
 
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_secure_connect
     const auto ret = nxd_mqtt_client_secure_connect(this,
                                                     server_ip,
                                                     server_port,
@@ -307,6 +315,7 @@ UINT MqttClient::disconnect() {
     log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
             ->printf("Stm32NetXMqttClient::MqttClient[%s]::disconnect()\r\n", getClientId());
 
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_disconnect
     const auto ret = nxd_mqtt_client_disconnect(this);
     if (ret != NXD_MQTT_SUCCESS) {
         log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
@@ -325,6 +334,7 @@ UINT MqttClient::deleteClient() {
 
     flags.clear(IS_READY_FOR_CONNECT);
 
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_delete
     const auto ret = nxd_mqtt_client_delete(this);
     if (ret != NXD_MQTT_SUCCESS) {
         log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
@@ -332,8 +342,7 @@ UINT MqttClient::deleteClient() {
                          getClientId(), ret);
         return ret;
     }
-    flags.clear(IS_CONNECTED);
-    flags.clear(IS_CREATED);
+    flags.clear(IS_CONNECTED | IS_CREATED);
     return ret;
 }
 
@@ -341,6 +350,7 @@ UINT MqttClient::loginSet(const char *username, const char *password) {
     log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
             ->printf("Stm32NetXMqttClient::MqttClient[%s]::loginSet(%s, ...)\r\n", getClientId(), username);
 
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_set_login
     const auto ret = nxd_mqtt_client_login_set(this,
                                                const_cast<CHAR *>(username), strlen(username),
                                                const_cast<CHAR *>(password), strlen(password));
@@ -356,6 +366,7 @@ UINT MqttClient::disconnectNotifySet(void (*disconnect_notify)(NXD_MQTT_CLIENT *
     log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
             ->printf("Stm32NetXMqttClient::MqttClient[%s]::disconnectNotifySet()\r\n", getClientId());
 
+    // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_disconnect_notify_set
     const auto ret = nxd_mqtt_client_disconnect_notify_set(this, disconnect_notify);
     if (ret != NXD_MQTT_SUCCESS) {
         log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)

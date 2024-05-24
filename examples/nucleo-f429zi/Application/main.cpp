@@ -48,20 +48,19 @@ void loop() {
 
     Stm32NetX::Address address;
     address.nxd_ip_version = 4;
-    // address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 2, 198);
-    address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 3, 130);
+    address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 2, 198);
+    // address.nxd_ip_address.v4 = IP_ADDRESS(10, 82, 3, 130);
+    // address.nxd_ip_address.v4 = IP_ADDRESS(127, 0, 0, 1);
 
     if (Stm32NetXMqttClient::mqttClient->isReadyForConnect()) {
         Stm32NetXMqttClient::mqttClient->loginSet("testuser", "eZ.1234");
         // Stm32NetXMqttClient::mqttClient->connect(&address, NXD_MQTT_PORT, 30, NX_TRUE,
         //               Stm32ThreadX::WaitOption{TX_TIMER_TICKS_PER_SECOND * 10});
 
-        // Stm32NetXMqttClient::mqttClient->setGetTrustedCertificateFunction([](Stm32NetX::Secure::X509 &x509TrustedCert) {
-        // const auto ret = x509TrustedCert.certificateInitialize(rootca_certs, sizeof(rootca_certs));
-        // return ret;
-        // });
-
-        Stm32NetXMqttClient::mqttClient->setRootCa(rootca_certs, sizeof(rootca_certs));
+        Stm32NetXMqttClient::mqttClient->setGetTrustedCertificateFunction([](Stm32NetX::Secure::X509 &x509TrustedCert) {
+            const auto ret = x509TrustedCert.certificateInitialize(rootca_certs, sizeof(rootca_certs));
+            return ret;
+        });
 
         Stm32NetXMqttClient::mqttClient->secureConnect(&address, NXD_MQTT_TLS_PORT, 30, NX_TRUE,
                                                        Stm32ThreadX::WaitOption{TX_TIMER_TICKS_PER_SECOND * 10});
