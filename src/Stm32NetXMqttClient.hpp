@@ -391,10 +391,25 @@ namespace Stm32NetXMqttClient {
 
 
             // Initialize TLS module
+            // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-secure-tls/chapter4.md#nx_secure_tls_initialize
             nx_secure_tls_initialize();
 
 
+            // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-secure-tls/chapter4.md#nx_secure_tls_metadata_size_calculate
+            ULONG metadata_size;
+            ret = nx_secure_tls_metadata_size_calculate(&nx_crypto_tls_ciphers, &metadata_size);
+            if (ret != NX_SUCCESS) {
+                logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                        ->printf("TLS session failed. nx_secure_tls_metadata_size_calculate() = 0x%02x\r\n",
+                                 ret);
+                return ret;
+            }
+            logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::NOTICE)
+                    ->printf("metadata_size = %lu\r\n", metadata_size);
+
+
             // Create a TLS session
+            // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-secure-tls/chapter4.md#nx_secure_tls_session_create
             ret = nx_secure_tls_session_create(TLS_session_ptr, &nx_crypto_tls_ciphers,
                                                crypto_metadata_client, sizeof(crypto_metadata_client));
             if (ret != NX_SUCCESS) {
