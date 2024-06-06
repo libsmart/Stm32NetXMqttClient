@@ -15,10 +15,10 @@ CHAR threadName_mainLoopThread[] = "loop()";
 CCMRAM TX_THREAD threadStruct_mainLoopThread;
 
 enum class mainThreadFlagsEnum : ULONG {
-    NONE = (ULONG)0,
-    IS_SYSTEM_INITIALIZED = (ULONG)1 << 0,
-    IS_RUNNING = (ULONG)1 << 1,
-    THE_END = (ULONG)1 << 31
+    NONE = (ULONG) 0,
+    IS_SYSTEM_INITIALIZED = (ULONG) 1 << 0,
+    IS_RUNNING = (ULONG) 1 << 1,
+    THE_END = (ULONG) 1 << 31
 };
 
 CCMRAM Stm32ThreadX::EventFlags mainThreadFlags;
@@ -50,7 +50,7 @@ _Noreturn static VOID mainLoopThread(ULONG initial_input) {
     mainThreadFlags.set(static_cast<ULONG>(mainThreadFlagsEnum::IS_SYSTEM_INITIALIZED));
     mainThreadFlags.set(static_cast<ULONG>(mainThreadFlagsEnum::IS_RUNNING));
 
-    // setup2();
+    loopOnce();
 
     while (true) {
         if (mainThreadFlags.isSet(static_cast<ULONG>(mainThreadFlagsEnum::IS_RUNNING))) {

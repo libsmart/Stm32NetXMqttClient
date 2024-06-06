@@ -14,7 +14,10 @@
 #define EASY_SMART_STM32_skeleton_DEFINES_H
 
 /** Name of the firmware. */
-#define FIRMWARE_NAME "stm32f4_usb_serial"
+#define FIRMWARE_NAME "nucleo-f429zi"
+
+/** Copyright of the firmware */
+#define FIRMWARE_COPY "(c) 2024 easy-smart solution GmbH"
 
 /** Version of the firmware. */
 #ifndef FIRMWARE_VERSION

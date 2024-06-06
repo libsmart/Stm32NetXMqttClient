@@ -15,6 +15,7 @@
 #include "Stm32ItmLogger.hpp"
 #include "Stm32NetX.hpp"
 #include "WaitOption.hpp"
+#include "Topic.hpp"
 
 #ifdef LIBSMART_ENABLE_STD_FUNCTION
 #include <cstdint>

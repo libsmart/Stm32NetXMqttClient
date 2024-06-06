@@ -19,9 +19,10 @@ extern "C" {
 #endif
 
     void setup();
-    void errorHandler();
+    void loopOnce();
     void loop();
-    void Stack_Error_Handler(TX_THREAD *thread_ptr);
+    _Noreturn void errorHandler();
+    _Noreturn void Stack_Error_Handler(TX_THREAD *thread_ptr);
 
 #ifdef __cplusplus
 }

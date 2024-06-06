@@ -13,7 +13,9 @@
 
 #include "globals.h"
 #include "Stm32ItmLogger.hpp"
+#include "Topic.hpp"
 #include <cstdint>
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,6 +23,7 @@ extern "C" {
 
 extern uint32_t dummyCpp;
 extern Stm32ItmLogger::Stm32ItmLogger &Logger;
+inline Stm32NetXMqttClient::Topic topic;
 
 #ifdef __cplusplus
 }

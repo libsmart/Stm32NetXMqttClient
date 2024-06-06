@@ -14,6 +14,7 @@
 #include <Stm32NetXMqttClient.hpp>
 
 #include "Address.hpp"
+#include "eth.h"
 #include "globals.hpp"
 #include "Helper.hpp"
 #include "RunEvery.hpp"
@@ -32,6 +33,27 @@ void setup() {
     dummyCandCpp = 0;
 
     tx_thread_stack_error_notify(Stack_Error_Handler);
+}
+
+
+void loopOnce() {
+    Stm32ItmLogger::logger.setSeverity(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
+            ->println("::loopOnce()");
+
+    topic.printf("Hello/World/%02X%02X%02X%02X%02X%02X/",
+                 heth.Init.MACAddr[0], heth.Init.MACAddr[1], heth.Init.MACAddr[2],
+                 heth.Init.MACAddr[3], heth.Init.MACAddr[4], heth.Init.MACAddr[5]
+    );
+    topic.setCurrentTopicAsBaseName();
+
+    static char hostname[] = FIRMWARE_NAME"-000000";
+    snprintf(hostname, sizeof(hostname), FIRMWARE_NAME"-%02X%02X%02X",
+             heth.Init.MACAddr[3], heth.Init.MACAddr[4], heth.Init.MACAddr[5]);
+    Stm32NetX::NX->getConfig()->hostname = hostname;
+    Stm32NetX::NX->begin();
+
+    Stm32NetXMqttClient::mqttClient->setClientId(hostname);
+    Stm32NetXMqttClient::mqttClient->begin();
 }
 
 
@@ -77,8 +99,11 @@ void loop() {
     static Stm32Common::RunEvery re1(2000);
     re1.loop([]() {
         char str[10];
-        snprintf(str, sizeof(str), "%d", dummyCpp);
-        Stm32NetXMqttClient::mqttClient->publish("hello", str, NX_TRUE, 0,
+        snprintf(str, sizeof(str), "%d", millis() / 1000);
+
+        topic.clearName()->print("uptime");
+
+        Stm32NetXMqttClient::mqttClient->publish(&topic, str, NX_TRUE, 0,
                                                  Stm32ThreadX::WaitOption{Stm32ThreadX::WaitOption::NO_WAIT});
     });
 
@@ -91,16 +116,16 @@ void loop() {
  * @brief This function handles fatal errors.
  * @see Error_Handler() in Core/Src/main.c
  */
-void errorHandler() {
-    while (true) {
+[[noreturn]] void errorHandler() {
+    for (;;) {
         //        for (uint32_t i = (SystemCoreClock / 10); i > 0; i--) { UNUSED(i); }
     }
 }
 
-void Stack_Error_Handler(TX_THREAD *thread_ptr) {
+
+[[noreturn]] void Stack_Error_Handler(TX_THREAD *thread_ptr) {
     Logger.print("==> Stack_Error_Handler() in ");
     Logger.println(thread_ptr->tx_thread_name);
     __disable_irq();
-    while (1) {
-    }
+    for (;;) { ; }
 }

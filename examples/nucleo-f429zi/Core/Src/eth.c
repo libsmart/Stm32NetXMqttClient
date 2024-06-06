@@ -27,7 +27,8 @@ ETH_DMADescTypeDef  DMATxDscrTab[ETH_TX_DESC_CNT]; /* Ethernet Tx DMA Descriptor
 ETH_TxPacketConfig TxConfig;
 
 /* USER CODE BEGIN 0 */
-
+#include "Stm32ItmLoggerCPPWrapper.hpp"
+#include "MCU/UidCppWrapper.hpp"
 /* USER CODE END 0 */
 
 ETH_HandleTypeDef heth;
@@ -59,6 +60,14 @@ void MX_ETH_Init(void)
   heth.Init.RxBuffLen = 1536;
 
   /* USER CODE BEGIN MACADDRESS */
+
+    // Create MAC address from MCU UID
+    MACAddr[2] = (Stm32Common_MCU_Uid_getUid32() >> 24) & 0xFF;
+    MACAddr[3] = (Stm32Common_MCU_Uid_getUid32() >> 16) & 0xFF;
+    MACAddr[4] = (Stm32Common_MCU_Uid_getUid32() >> 8) & 0xFF;
+    MACAddr[5] = (Stm32Common_MCU_Uid_getUid32() >> 0) & 0xFF;
+
+    Logger_printf("uid32 = 0x%08x\r\n", Stm32Common_MCU_Uid_getUid32());
 
   /* USER CODE END MACADDRESS */
 
