@@ -155,6 +155,12 @@ namespace Stm32NetXMqttClient {
                      Stm32ThreadX::WaitOption waitOption);
 
 
+        UINT publish(Topic *topic, const CHAR *message,
+                     UINT retain,
+                     UINT QoS,
+                     Stm32ThreadX::WaitOption waitOption);
+
+
         /**
          * @brief Subscribes to a specified MQTT topic with the given Quality of Service level.
          *

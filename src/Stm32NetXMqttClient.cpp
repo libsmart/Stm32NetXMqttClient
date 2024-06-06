@@ -141,6 +141,11 @@ UINT MqttClient::publish(const CHAR *topic_name, const CHAR *message, const UINT
     return ret;
 }
 
+UINT MqttClient::publish(Topic *topic, const CHAR *message, UINT retain, UINT QoS,
+                         Stm32ThreadX::WaitOption waitOption) {
+    return publish(topic->getTopic(), message, retain, QoS, waitOption);
+}
+
 UINT MqttClient::subscribe(const CHAR *topic_name, UINT QoS) {
     log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
             ->printf("Stm32NetXMqttClient::MqttClient[%s]::subscribe('%s')\r\n", getClientId(), topic_name);
