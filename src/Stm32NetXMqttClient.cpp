@@ -21,9 +21,9 @@ void MqttClient::createNetworkThread() {
     setStack(NX->getBytePool()->allocate(LIBSMART_STM32NETX_MQTT_CLIENT_THREAD_STACK_SIZE),
              LIBSMART_STM32NETX_MQTT_CLIENT_THREAD_STACK_SIZE);
 
-    // Start thread
+    // Create thread
     createThread();
-    resume();
+    // resume();
 }
 
 void MqttClient::mqttThread() {
@@ -375,4 +375,8 @@ UINT MqttClient::disconnectNotifySet(void (*disconnect_notify)(NXD_MQTT_CLIENT *
                     getClientId(), ret);
     }
     return ret;
+}
+
+void MqttClient::begin() {
+    resume();
 }

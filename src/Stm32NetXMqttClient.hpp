@@ -7,6 +7,7 @@
 #define LIBSMART_STM32NETXMQTTCLIENT_STM32NETXMQTTCLIENT_HPP
 
 #include <libsmart_config.hpp>
+#include <main.h>
 
 #include "nx_api.h"
 #include "tx_api.h"
@@ -358,6 +359,9 @@ namespace Stm32NetXMqttClient {
             // Stm32ItmLogger::logger.printf("disconnectNotify this=0x%08x\r\n", this);
             flags.clear(IS_CONNECTED);
         }
+
+
+        void begin();
 
 #ifdef NX_SECURE_ENABLE
         /**
