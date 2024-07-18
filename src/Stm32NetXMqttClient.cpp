@@ -83,10 +83,15 @@ void MqttClient::mqttThread() {
                     memset(message_buffer, 0, sizeof(message_buffer));
 
                     ret = messageGet(
-                        topic_buffer, sizeof(topic_buffer), &actual_topic_length,
-                        message_buffer, sizeof(message_buffer), &actual_message_length
+                        topic_buffer, sizeof(topic_buffer) - 1, &actual_topic_length,
+                        message_buffer, sizeof(message_buffer) - 1, &actual_message_length
                     );
                     if (ret == NXD_MQTT_SUCCESS) {
+                        auto subscription = findSubscriptionByTopic(reinterpret_cast<char *>(topic_buffer));
+                        if(subscription != nullptr) {
+                            subscription->runOnMsgCallback(reinterpret_cast<char *>(message_buffer));
+                        }
+
                         log(Stm32ItmLogger::LoggerInterface::Severity::NOTICE)
                                 ->printf("MQTT '%s' = '%s'\r\n",
                                          topic_buffer,
@@ -164,6 +169,15 @@ UINT MqttClient::subscribe(const CHAR *topic_name, UINT QoS) {
     return ret;
 }
 
+UINT MqttClient::subscribe(Subscription *subscription) {
+    auto ret = subscribe(subscription->getTopic(), subscription->getQoS());
+    if (ret == NXD_MQTT_SUCCESS) {
+        registerSubscription(subscription);
+    }
+    return ret;
+}
+
+
 UINT MqttClient::unsubscribe(const CHAR *topic_name) {
     log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
             ->printf("Stm32NetXMqttClient::MqttClient[%s]::unsubscribe('%s')\r\n", getClientId(), topic_name);
@@ -179,6 +193,11 @@ UINT MqttClient::unsubscribe(const CHAR *topic_name) {
                          getClientId(), ret);
     }
     return ret;
+}
+
+UINT MqttClient::unsubscribe(Subscription *subscription) {
+    unregisterSubscription(subscription);
+    return unsubscribe(subscription->getTopic());
 }
 
 UINT MqttClient::messageGet(UCHAR *topic_buffer, UINT topic_buffer_size, UINT *actual_topic_length,
@@ -385,3 +404,34 @@ UINT MqttClient::disconnectNotifySet(void (*disconnect_notify)(NXD_MQTT_CLIENT *
 void MqttClient::begin() {
     resume();
 }
+
+
+bool MqttClient::registerSubscription(Subscription *subscription) {
+    for (auto &i: subscriptions) {
+        if (i == nullptr) {
+            i = subscription;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool MqttClient::unregisterSubscription(Subscription *subscription) {
+    for (auto & i : subscriptions) {
+        if (i == subscription) {
+            i = nullptr;
+            return true;
+        }
+    }
+    return false;
+}
+
+Subscription *MqttClient::findSubscriptionByTopic(const char *topic) {
+    for (auto & i : subscriptions) {
+        if (strcmp(i->getTopic(), topic) == 0) {
+            return i;
+        }
+    }
+    return nullptr;
+}
+

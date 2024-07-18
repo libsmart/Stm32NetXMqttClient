@@ -177,6 +177,7 @@ namespace Stm32NetXMqttClient {
          */
         UINT subscribe(const CHAR *topic_name, UINT QoS);
 
+        UINT subscribe(Subscription *subscription);
 
         /**
          * @brief Unsubscribe from an MQTT topic.
@@ -191,6 +192,7 @@ namespace Stm32NetXMqttClient {
          */
         UINT unsubscribe(const CHAR *topic_name);
 
+        UINT unsubscribe(Subscription *subscription);
 
         /**
          * @brief Get a message from the MQTT client.
@@ -512,6 +514,11 @@ namespace Stm32NetXMqttClient {
         Stm32NetX::NetX *NX;
         UCHAR *clientStackMemory = {};
         Stm32ThreadX::EventFlags flags{"Stm32NetXMqttClient::MqttClient::flags", getLogger()};
+        Subscription *subscriptions[LIBSMART_STM32NETXMQTTCLIENT_MAX_SUBSCRIPTIONS] = {};
+
+        bool registerSubscription(Subscription *subscription);
+        bool unregisterSubscription(Subscription *subscription);
+        Subscription *findSubscriptionByTopic(const char *topic);
 
     public:
         static UINT setup(TX_BYTE_POOL *byte_pool) {

@@ -7,6 +7,7 @@
 #define LIBSMART_STM32NETXMQTTCLIENT_TOPIC_HPP
 
 #include "nxd_mqtt_client.h"
+#include "Print.hpp"
 
 namespace Stm32NetXMqttClient {
     class Topic : public Stm32Common::Print {
