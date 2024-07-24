@@ -88,7 +88,7 @@ void MqttClient::mqttThread() {
                     );
                     if (ret == NXD_MQTT_SUCCESS) {
                         auto subscription = findSubscriptionByTopic(reinterpret_cast<char *>(topic_buffer));
-                        if(subscription != nullptr) {
+                        if (subscription != nullptr) {
                             subscription->runOnMsgCallback(reinterpret_cast<char *>(message_buffer));
                         }
 
@@ -121,6 +121,33 @@ const char *MqttClient::getClientId() {
 
 void MqttClient::setClientId(const char *clientid) {
     Nameable::setName(clientid);
+}
+
+UINT MqttClient::willMessageSet(const CHAR *will_topic, const CHAR *will_message, UINT will_retain_flag,
+                                UINT will_QoS) {
+    log(Stm32ItmLogger::LoggerInterface::Severity::INFORMATIONAL)
+            ->printf("Stm32NetXMqttClient::MqttClient[%s]::willMessageSet('%s', '%s')\r\n", getClientId(), will_topic,
+                     will_message);
+
+    // https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-mqtt/chapter3.md#nxd_mqtt_client_will_message_set
+    const auto ret = nxd_mqtt_client_will_message_set(this,
+                                                      reinterpret_cast<const UCHAR *>(will_topic),
+                                                      strlen(will_topic),
+                                                      (UCHAR *) will_message,
+                                                      strlen(will_message),
+                                                      will_retain_flag,
+                                                      will_QoS
+    );
+    if (ret != NXD_MQTT_SUCCESS) {
+        log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                ->printf("MQTT client '%s' will message set failed. nxd_mqtt_client_will_message_set() = 0x%02x\r\n",
+                         getClientId(), ret);
+    }
+    return ret;
+}
+
+UINT MqttClient::willMessageSet(Topic *topic, const CHAR *will_message, UINT will_retain_flag, UINT will_QoS) {
+    return willMessageSet(topic->getTopic(), will_message, will_retain_flag, will_QoS);
 }
 
 UINT MqttClient::publish(const CHAR *topic_name, const CHAR *message, const UINT retain, const UINT QoS,
@@ -417,7 +444,7 @@ bool MqttClient::registerSubscription(Subscription *subscription) {
 }
 
 bool MqttClient::unregisterSubscription(Subscription *subscription) {
-    for (auto & i : subscriptions) {
+    for (auto &i: subscriptions) {
         if (i == subscription) {
             i = nullptr;
             return true;
@@ -427,7 +454,7 @@ bool MqttClient::unregisterSubscription(Subscription *subscription) {
 }
 
 Subscription *MqttClient::findSubscriptionByTopic(const char *topic) {
-    for (auto & i : subscriptions) {
+    for (auto &i: subscriptions) {
         if (strcmp(i->getTopic(), topic) == 0) {
             return i;
         }

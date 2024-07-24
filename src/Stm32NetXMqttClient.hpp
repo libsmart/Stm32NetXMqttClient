@@ -134,6 +134,36 @@ namespace Stm32NetXMqttClient {
 
 
         /**
+         * @brief Set the will message for the MQTT client.
+         *
+         * @param will_topic The topic of the will message.
+         * @param will_message The content of the will message.
+         * @param will_retain_flag The retain flag of the will message.
+         * @param will_QoS The quality of service of the will message.
+         * @return UINT - The result of the operation.
+         *
+         * This method sets the will message for the MQTT client. The will message consists of a topic, a content, a retain flag, and a quality of service. The topic and message content are passed as C-style strings (`CHAR*`). The retain flag and quality of service are passed as unsigned integers (`UINT`). The method logs an informational message indicating the client ID and the will topic and message. It then calls the `nxd_mqtt_client_will_message_set` function to set the will message using the provided parameters. If the operation is successful, the method returns `NXD_MQTT_SUCCESS`. Otherwise, it logs an error message indicating the client ID and the error code returned by `nxd_mqtt_client_will_message_set`.
+         *
+         * @see nxd_mqtt_client_will_message_set
+         */
+        UINT willMessageSet(const CHAR *will_topic, const CHAR *will_message, UINT will_retain_flag, UINT will_QoS);
+
+
+        /**
+         * @brief Set the Will message for the MQTT client.
+         *
+         * @param topic - The topic on which the Will message will be published.
+         * @param will_message - The Will message to be published.
+         * @param will_retain_flag - The retain flag for the Will message.
+         * @param will_QoS - The QoS level for the Will message.
+         * @return UINT - The status of setting the Will message.
+         *
+         * This method sets the Will message for the MQTT client. The Will message is published on the specified topic when the connection to the MQTT broker is unexpectedly lost. The retain flag determines if the broker should retain the Will message. The QoS level determines the quality of service used to publish the Will message.
+         */
+        UINT willMessageSet(Topic *topic, const CHAR *will_message, UINT will_retain_flag, UINT will_QoS);
+
+
+        /**
          * @brief Publishes a message to a topic on the MQTT client.
          *
          * @param topic_name The name of the topic to publish the message to.
@@ -517,7 +547,9 @@ namespace Stm32NetXMqttClient {
         Subscription *subscriptions[LIBSMART_STM32NETXMQTTCLIENT_MAX_SUBSCRIPTIONS] = {};
 
         bool registerSubscription(Subscription *subscription);
+
         bool unregisterSubscription(Subscription *subscription);
+
         Subscription *findSubscriptionByTopic(const char *topic);
 
     public:
