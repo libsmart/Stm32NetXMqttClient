@@ -185,11 +185,20 @@ namespace Stm32NetXMqttClient {
                      UINT QoS,
                      Stm32ThreadX::WaitOption waitOption);
 
+        UINT publish(const CHAR *topic_name,
+             const CHAR *message,
+             UINT retain,
+             UINT QoS);
 
         UINT publish(Topic *topic, const CHAR *message,
                      UINT retain,
                      UINT QoS,
                      Stm32ThreadX::WaitOption waitOption);
+
+        UINT publish(Topic *topic, const CHAR *message,
+             UINT retain,
+             UINT QoS
+             );
 
 
         /**

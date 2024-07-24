@@ -176,9 +176,21 @@ UINT MqttClient::publish(const CHAR *topic_name, const CHAR *message, const UINT
     return ret;
 }
 
+UINT MqttClient::publish(const CHAR *topic_name, const CHAR *message, UINT retain, UINT QoS) {
+    return publish(topic_name, message, retain, QoS, Stm32ThreadX::WaitOption{
+                       Stm32ThreadX::WaitOption::NO_WAIT
+                   });
+}
+
 UINT MqttClient::publish(Topic *topic, const CHAR *message, UINT retain, UINT QoS,
                          Stm32ThreadX::WaitOption waitOption) {
     return publish(topic->getTopic(), message, retain, QoS, waitOption);
+}
+
+UINT MqttClient::publish(Topic *topic, const CHAR *message, UINT retain, UINT QoS) {
+    return publish(topic, message, retain, QoS, Stm32ThreadX::WaitOption{
+                       Stm32ThreadX::WaitOption::NO_WAIT
+                   });
 }
 
 UINT MqttClient::subscribe(const CHAR *topic_name, UINT QoS) {
