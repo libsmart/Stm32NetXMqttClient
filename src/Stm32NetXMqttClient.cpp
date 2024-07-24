@@ -170,6 +170,9 @@ UINT MqttClient::publish(const CHAR *topic_name, const CHAR *message, const UINT
                 ->printf("MQTT client '%s' publish failed. nxd_mqtt_client_publish() = 0x%02x\r\n",
                          getClientId(), ret);
     }
+    if (ret == NXD_MQTT_NOT_CONNECTED) {
+        flags.clear(IS_CONNECTED);
+    }
     return ret;
 }
 
@@ -192,6 +195,9 @@ UINT MqttClient::subscribe(const CHAR *topic_name, UINT QoS) {
         log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
                 ->printf("MQTT client '%s' subscribe failed. nxd_mqtt_client_subscribe() = 0x%02x\r\n",
                          getClientId(), ret);
+    }
+    if (ret == NXD_MQTT_NOT_CONNECTED) {
+        flags.clear(IS_CONNECTED);
     }
     return ret;
 }
@@ -218,6 +224,9 @@ UINT MqttClient::unsubscribe(const CHAR *topic_name) {
         log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
                 ->printf("MQTT client '%s' unsubscribe failed. nxd_mqtt_client_unsubscribe() = 0x%02x\r\n",
                          getClientId(), ret);
+    }
+    if (ret == NXD_MQTT_NOT_CONNECTED) {
+        flags.clear(IS_CONNECTED);
     }
     return ret;
 }
