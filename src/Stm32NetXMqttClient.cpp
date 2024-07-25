@@ -463,6 +463,10 @@ bool MqttClient::registerSubscription(Subscription *subscription) {
             return true;
         }
     }
+    log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+            ->printf(
+                "Stm32NetXMqttClient::MqttClient[%s]::registerSubscription(): subscription registry full\r\n",
+                getClientId());
     return false;
 }
 

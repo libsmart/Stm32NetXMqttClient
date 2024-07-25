@@ -21,6 +21,11 @@ namespace Stm32NetXMqttClient {
             setBaseName(base_name);
         }
 
+        explicit Topic(Topic *topic) {
+            std::memcpy(topic_name, topic->topic_name, sizeof(topic_name));
+            topic_name_pos = topic->topic_name_pos;
+        }
+
 
         /**
          * @brief Sets the topic string.
