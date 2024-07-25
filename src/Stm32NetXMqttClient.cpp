@@ -89,7 +89,9 @@ void MqttClient::mqttThread() {
                     if (ret == NXD_MQTT_SUCCESS) {
                         auto subscription = findSubscriptionByTopic(reinterpret_cast<char *>(topic_buffer));
                         if (subscription != nullptr) {
-                            subscription->runOnMsgCallback(reinterpret_cast<char *>(message_buffer));
+                            subscription->runOnMsgCallback(
+                                reinterpret_cast<char *>(topic_buffer),
+                                reinterpret_cast<char *>(message_buffer));
                         }
 
                         log(Stm32ItmLogger::LoggerInterface::Severity::NOTICE)
@@ -167,8 +169,8 @@ UINT MqttClient::publish(const CHAR *topic_name, const CHAR *message, const UINT
                                              waitOption());
     if (ret != NXD_MQTT_SUCCESS) {
         log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
-                ->printf("MQTT client '%s' publish failed. nxd_mqtt_client_publish() = 0x%02x\r\n",
-                         getClientId(), ret);
+                ->printf("Stm32NetXMqttClient::MqttClient[%s]: nxd_mqtt_client_publish('%s', '%s') = 0x%02x\r\n",
+                         getClientId(), topic_name, message, ret);
     }
     if (ret == NXD_MQTT_NOT_CONNECTED) {
         flags.clear(IS_CONNECTED);
@@ -205,8 +207,8 @@ UINT MqttClient::subscribe(const CHAR *topic_name, UINT QoS) {
     );
     if (ret != NXD_MQTT_SUCCESS) {
         log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
-                ->printf("MQTT client '%s' subscribe failed. nxd_mqtt_client_subscribe() = 0x%02x\r\n",
-                         getClientId(), ret);
+                ->printf("Stm32NetXMqttClient::MqttClient[%s]: nxd_mqtt_client_subscribe('%s') = 0x%02x\r\n",
+                         getClientId(), topic_name, ret);
     }
     if (ret == NXD_MQTT_NOT_CONNECTED) {
         flags.clear(IS_CONNECTED);
@@ -476,7 +478,7 @@ bool MqttClient::unregisterSubscription(Subscription *subscription) {
 
 Subscription *MqttClient::findSubscriptionByTopic(const char *topic) {
     for (auto &i: subscriptions) {
-        if (strcmp(i->getTopic(), topic) == 0) {
+        if (i != nullptr && i->topicMatches(topic)) {
             return i;
         }
     }

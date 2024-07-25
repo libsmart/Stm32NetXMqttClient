@@ -41,9 +41,9 @@ extern const NX_SECURE_TLS_CRYPTO nx_crypto_tls_ciphers;
 namespace Stm32NetXMqttClient {
 #ifdef NX_SECURE_ENABLE
     /* calculated with nx_secure_tls_metadata_size_calculate */
-    static CHAR crypto_metadata_client[CRYPTO_METADATA_CLIENT_SIZE] __attribute__((section(".ccmram")));
+    static CHAR crypto_metadata_client[CRYPTO_METADATA_CLIENT_SIZE] CCMRAM;
     /* Define the TLS packet reassembly buffer. */
-    static UCHAR tls_packet_buffer[TLS_PACKET_BUFFER_SIZE] __attribute__((section(".ccmram")));
+    static UCHAR tls_packet_buffer[TLS_PACKET_BUFFER_SIZE] CCMRAM;
 #endif
 
     class MqttClient;
@@ -186,9 +186,9 @@ namespace Stm32NetXMqttClient {
                      Stm32ThreadX::WaitOption waitOption);
 
         UINT publish(const CHAR *topic_name,
-             const CHAR *message,
-             UINT retain,
-             UINT QoS);
+                     const CHAR *message,
+                     UINT retain,
+                     UINT QoS);
 
         UINT publish(Topic *topic, const CHAR *message,
                      UINT retain,
@@ -196,9 +196,9 @@ namespace Stm32NetXMqttClient {
                      Stm32ThreadX::WaitOption waitOption);
 
         UINT publish(Topic *topic, const CHAR *message,
-             UINT retain,
-             UINT QoS
-             );
+                     UINT retain,
+                     UINT QoS
+        );
 
 
         /**
@@ -456,9 +456,11 @@ namespace Stm32NetXMqttClient {
                                  ret);
                 return ret;
             }
-            logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::NOTICE)
-                    ->printf("metadata_size = %lu\r\n", metadata_size);
 
+            if (metadata_size > sizeof(crypto_metadata_client)) {
+                logger->setSeverity(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
+                        ->printf("metadata_size = %lu  >  sizeof(crypto_metadata_client) = %lu", metadata_size, sizeof(crypto_metadata_client));
+            }
 
             // Create a TLS session
             // @see https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/netx-duo/netx-duo-secure-tls/chapter4.md#nx_secure_tls_session_create
