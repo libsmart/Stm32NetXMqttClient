@@ -22,7 +22,7 @@ namespace Stm32NetXMqttClient {
         }
 
         explicit Topic(Topic *topic) {
-            std::memcpy(topic_name, topic->topic_name, sizeof(topic_name));
+            std::memcpy(topic_name, topic->topic_name, LIBSMART_STM32NETXMQTTCLIENT_MAX_TOPIC_LENGTH);
             topic_name_pos = topic->topic_name_pos;
         }
 
@@ -109,7 +109,9 @@ namespace Stm32NetXMqttClient {
          * @return A pointer to the topic object.
          */
         Topic *clearName() {
-            std::memset(const_cast<char *>(getName()), 0, sizeof(topic_name) - topic_name_pos);
+            if (topic_name_pos < sizeof(topic_name)) {
+                std::memset(const_cast<char *>(getName()), 0, sizeof(topic_name) - topic_name_pos);
+            }
             return this;
         }
 
@@ -124,8 +126,14 @@ namespace Stm32NetXMqttClient {
          */
         void setBaseName(const char *baseName) {
             if (strlen(baseName) > 0) setBaseName("");
-            const auto topic_name_length = strlen(topic_name + topic_name_pos);
-            const auto new_topic_name_pos = strlen(baseName);
+            const auto new_topic_name_pos = std::min(
+                strlen(baseName),
+                (size_t) LIBSMART_STM32NETXMQTTCLIENT_MAX_TOPIC_LENGTH
+            );
+            const auto topic_name_length = std::min(
+                strlen(topic_name + topic_name_pos),
+                LIBSMART_STM32NETXMQTTCLIENT_MAX_TOPIC_LENGTH - new_topic_name_pos
+            );
             std::memmove(topic_name + new_topic_name_pos, topic_name + topic_name_pos, topic_name_length);
             std::memmove(topic_name, baseName, new_topic_name_pos);
             topic_name_pos = new_topic_name_pos;
@@ -206,7 +214,7 @@ namespace Stm32NetXMqttClient {
          * @return The number of bytes available in the output buffer.
          */
         int availableForWrite() override {
-            return sizeof(topic_name) - strlen(topic_name);
+            return std::max(LIBSMART_STM32NETXMQTTCLIENT_MAX_TOPIC_LENGTH - static_cast<int>(strlen(topic_name)), 0);
         }
 
 
@@ -235,9 +243,9 @@ namespace Stm32NetXMqttClient {
 
     private:
         /** Topic string buffer */
-        char topic_name[LIBSMART_STM32NETXMQTTCLIENT_MAX_TOPIC_LENGTH] = {};
+        char topic_name[LIBSMART_STM32NETXMQTTCLIENT_MAX_TOPIC_LENGTH + 1] = {};
 
-        /** Position, where baseName ends */
+        /** Position, where topicName starts */
         size_t topic_name_pos = 0;
     };
 }
