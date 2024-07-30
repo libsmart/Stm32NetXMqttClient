@@ -372,7 +372,7 @@ UINT MqttClient::secureConnect(NXD_ADDRESS *server_ip, UINT server_port, UINT ke
                                                     waitOption());
     if (ret != NXD_MQTT_SUCCESS) {
         log(Stm32ItmLogger::LoggerInterface::Severity::ERROR)
-                ->printf("MQTT client '%s' connect failed. nxd_mqtt_client_connect() = 0x%02x\r\n",
+                ->printf("MQTT client '%s' connect failed. nxd_mqtt_client_secure_connect() = 0x%02x\r\n",
                          getClientId(), ret);
         return ret;
     }
